@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from functools import lru_cache
 from time import perf_counter
-from typing import Any, Iterable, Sequence
+from typing import Any, Callable, Iterable, Sequence
 
 import mlx.core as mx
 
@@ -38,21 +39,23 @@ def generate_greedy(
     seed: int | None = None,
     eos_token_ids: Iterable[int] | None = None,
     cache: Any = None,
+    collect_step_timings: bool = True,
 ) -> GenerationResult:
     if max_new_tokens < 0:
         raise ValueError("max_new_tokens must be non-negative")
     prompt_token_ids = _resolve_input_ids(tokenizer, prompt, input_ids)
+    if not prompt_token_ids:
+        raise ValueError("input_ids must not be empty")
+
     eos = set(eos_token_ids or _tokenizer_eos(tokenizer))
+    decode_tokens = _token_decoder(tokenizer)
     generated: list[int] = []
     timing = GenerationTiming()
-    current = list(prompt_token_ids)
     stop_reason = "max_tokens"
+    next_input = list(prompt_token_ids)
 
     for step in range(max_new_tokens):
-        if not current:
-            raise ValueError("input_ids must not be empty")
-
-        step_input = mx.array([current], dtype=mx.int32)
+        step_input = mx.array([next_input], dtype=mx.int32)
         started = perf_counter()
         step_result = decode_step(
             model=model,
@@ -65,17 +68,21 @@ def generate_greedy(
         cache = step_result.cache
         token_id = step_result.token_id
         generated.append(token_id)
-        current = [token_id]
+        next_input[0:] = [token_id]
         timing.decode_steps += 1
-        timing.step_ms.append(step_result.elapsed_ms)
-        timing.decode_ms += elapsed
+        if collect_step_timings:
+            timing.step_ms.append(step_result.elapsed_ms)
+        if step == 0:
+            timing.prefill_ms += elapsed
+        else:
+            timing.decode_ms += elapsed
 
         if token_id in eos:
             stop_reason = "eos"
             break
 
     return GenerationResult(
-        text=_decode_tokens(tokenizer, generated),
+        text=decode_tokens(generated),
         token_ids=generated,
         prompt_token_ids=prompt_token_ids,
         stop_reason=stop_reason,
@@ -89,14 +96,27 @@ def _resolve_input_ids(tokenizer: Any, prompt: str | None, input_ids: Sequence[i
         return [int(token) for token in input_ids]
     if prompt is None:
         raise ValueError("Either prompt or input_ids is required")
-    encoded = tokenizer.encode(prompt)
+    encoded = _encode_prompt(tokenizer.encode, prompt)
     return [int(token) for token in encoded]
 
 
-def _decode_tokens(tokenizer: Any, token_ids: Sequence[int]) -> str:
-    if hasattr(tokenizer, "decode"):
-        return str(tokenizer.decode(list(token_ids)))
-    return " ".join(str(token_id) for token_id in token_ids)
+def _encode_prompt(encode: Callable[[str], Sequence[int]], prompt: str) -> tuple[int, ...]:
+    try:
+        return _encode_prompt_cached(encode, prompt)
+    except TypeError:
+        return tuple(int(token) for token in encode(prompt))
+
+
+@lru_cache(maxsize=256)
+def _encode_prompt_cached(encode: Callable[[str], Sequence[int]], prompt: str) -> tuple[int, ...]:
+    return tuple(int(token) for token in encode(prompt))
+
+
+def _token_decoder(tokenizer: Any):
+    decode = getattr(tokenizer, "decode", None)
+    if decode is None:
+        return lambda token_ids: " ".join(str(token_id) for token_id in token_ids)
+    return lambda token_ids: str(decode(list(token_ids)))
 
 
 def _tokenizer_eos(tokenizer: Any) -> set[int]:

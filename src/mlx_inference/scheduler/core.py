@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import deque
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -43,12 +44,22 @@ class SchedulerResult:
 
 
 class Scheduler:
-    def __init__(self, *, max_active: int = 4, token_budget: int = 1024, cache_policy: CachePolicy | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        max_active: int = 4,
+        token_budget: int = 1024,
+        cache_policy: CachePolicy | None = None,
+        max_trace_events: int = 10000,
+        enable_trace: bool = True,
+    ) -> None:
         self.max_active = max_active
         self.token_budget = token_budget
         self.cache_policy = cache_policy or CachePolicy()
+        self.enable_trace = enable_trace
+        self.trace: deque[dict[str, Any]] = deque(maxlen=max_trace_events if enable_trace else 0)
         self._pending: list[SchedulerRequest] = []
-        self.trace: list[dict[str, Any]] = []
+        self._pending_by_id: dict[str, SchedulerRequest] = {}
 
     def submit(self, request: SchedulerRequest) -> None:
         if len(request.input_ids) + request.max_new_tokens > self.token_budget:
@@ -56,18 +67,22 @@ class Scheduler:
         self.cache_policy.create_request_cache(request.request_id)
         self.cache_policy.append_tokens(request.request_id, request.input_ids)
         self._pending.append(request)
-        self.trace.append({"event": "submit", "request_id": request.request_id, "cache_tokens": list(request.input_ids)})
+        self._pending_by_id[request.request_id] = request
+        if self.enable_trace:
+            self.trace.append({"event": "submit", "request_id": request.request_id, "cache_tokens": list(request.input_ids)})
 
     def cancel(self, request_id: str) -> None:
-        for request in self._pending:
-            if request.request_id == request_id:
-                request.cancelled = True
+        request = self._pending_by_id.get(request_id)
+        if request:
+            request.cancelled = True
+            if self.enable_trace:
                 self.trace.append({"event": "cancel", "request_id": request_id})
-                return
 
     def run(self, model: Any) -> list[SchedulerResult]:
         active = self._pending[: self.max_active]
         self._pending = self._pending[self.max_active :]
+        for req in active:
+            self._pending_by_id.pop(req.request_id, None)
         completed: list[SchedulerResult] = []
 
         while active:
@@ -78,34 +93,38 @@ class Scheduler:
                 continue
 
             token_slices = [request.next_input() for request in runnable]
-            batch = _pad_token_slices(token_slices)
-            self.trace.append(
-                {
-                    "event": "model_forward_batch",
-                    "active_requests": [request.request_id for request in runnable],
-                    "token_slice": batch,
-                }
-            )
+            batch, attention_mask = _pad_token_slices(token_slices)
+            if self.enable_trace:
+                self.trace.append(
+                    {
+                        "event": "model_forward_batch",
+                        "active_requests": [request.request_id for request in runnable],
+                        "token_slice": batch,
+                        "attention_mask": attention_mask,
+                    }
+                )
             logits = model(mx.array(batch, dtype=mx.int32))
             next_tokens = select_tokens_from_logits(logits, temperature=0.0)
             for request, token_id in zip(runnable, next_tokens, strict=True):
                 request.generated_tokens.append(token_id)
                 self.cache_policy.append_tokens(request.request_id, [token_id])
-                self.trace.append(
-                    {
-                        "event": "next_token",
-                        "request_id": request.request_id,
-                        "token_id": token_id,
-                    }
-                )
-                self.trace.append(
-                    {
-                        "event": "cache_update",
-                        "request_id": request.request_id,
-                        "token_id": token_id,
-                        "cache_tokens": list(self.cache_policy.get_request_cache(request.request_id).tokens),
-                    }
-                )
+                if self.enable_trace:
+                    self.trace.append(
+                        {
+                            "event": "next_token",
+                            "request_id": request.request_id,
+                            "token_id": token_id,
+                        }
+                    )
+                    cache_tokens = self.cache_policy.get_request_cache(request.request_id).tokens
+                    self.trace.append(
+                        {
+                            "event": "cache_update",
+                            "request_id": request.request_id,
+                            "token_id": token_id,
+                            "cache_tokens": list(cache_tokens) if isinstance(cache_tokens, deque) else cache_tokens,
+                        }
+                    )
 
             still_active: list[SchedulerRequest] = []
             for request in active:
@@ -131,12 +150,16 @@ class Scheduler:
         )
 
 
-def _pad_token_slices(token_slices: list[list[int]]) -> list[list[int]]:
+def _pad_token_slices(token_slices: list[list[int]]) -> tuple[list[list[int]], list[list[int]]]:
     width = max(len(tokens) for tokens in token_slices)
     batch: list[list[int]] = []
+    attention_mask: list[list[int]] = []
     for tokens in token_slices:
         if len(tokens) == width:
             batch.append(tokens)
+            attention_mask.append([1] * width)
         else:
-            batch.append(tokens + [tokens[-1]] * (width - len(tokens)))
-    return batch
+            padding = width - len(tokens)
+            batch.append(tokens + [tokens[-1]] * padding)
+            attention_mask.append([1] * len(tokens) + [0] * padding)
+    return batch, attention_mask

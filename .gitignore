@@ -15,3 +15,5 @@ build/
 .codegraph
 .omo/
 .omx/
+.omc/
+.claude/

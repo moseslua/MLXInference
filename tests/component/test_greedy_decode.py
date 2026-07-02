@@ -38,3 +38,21 @@ def test_generate_greedy_stops_on_eos() -> None:
 
     assert result.token_ids == [7]
     assert result.stop_reason == "eos"
+
+
+def test_generate_greedy_can_skip_step_timing_detail() -> None:
+    tokenizer = FakeTokenizer()
+    model = FakeCausalLM(vocab_size=16)
+
+    result = generate_greedy(
+        model=model,
+        tokenizer=tokenizer,
+        input_ids=[2],
+        max_new_tokens=2,
+        collect_step_timings=False,
+    )
+
+    assert result.token_ids == [3, 4]
+    assert result.timing.decode_steps == 2
+    assert result.timing.step_ms == []
+    assert result.timing.decode_ms > 0

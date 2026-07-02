@@ -1,13 +1,15 @@
 from __future__ import annotations
 
+import inspect
 from dataclasses import dataclass, field
 from time import perf_counter
 from typing import Any, Callable, Sequence
 
 import mlx.core as mx
-import numpy as np
 
 LogitsProcessor = Callable[[mx.array], mx.array]
+
+_model_call_cache: dict[int, str] = {}
 
 
 @dataclass(slots=True)
@@ -35,7 +37,6 @@ def decode_step(
     for processor in logits_processors or ():
         logits = processor(logits)
 
-    mx.eval(logits)
     token_id = _select_token(logits, temperature=temperature, seed=seed)
     elapsed_ms = (perf_counter() - started) * 1000
     return DecodeStepResult(
@@ -53,33 +54,77 @@ def select_tokens_from_logits(
     temperature: float = 0.0,
     seed: int | None = None,
 ) -> list[int]:
-    mx.eval(logits)
-    values = np.array(logits[:, -1, :])
+    next_token_logits = logits[:, -1, :]
     if temperature <= 0:
-        return [int(row.argmax()) for row in values]
+        selected = mx.argmax(next_token_logits, axis=-1)
+    elif seed is None:
+        selected = mx.random.categorical(next_token_logits / temperature, axis=-1)
+    else:
+        selected = mx.random.categorical(next_token_logits / temperature, axis=-1, key=mx.random.key(seed))
 
-    rng = np.random.default_rng(seed)
-    selected: list[int] = []
-    for row in values:
-        scaled = row / temperature
-        scaled = scaled - scaled.max()
-        probabilities = np.exp(scaled)
-        probabilities = probabilities / probabilities.sum()
-        selected.append(int(rng.choice(len(row), p=probabilities)))
-    return selected
+    mx.eval(selected)
+    return [int(token_id) for token_id in selected.tolist()]
 
 
 def _call_model(model: Any, input_ids: mx.array, cache: Any) -> Any:
-    try:
-        return model(input_ids, cache=cache)
-    except TypeError as first_error:
+    model_id = id(model)
+
+    if model_id not in _model_call_cache:
         try:
-            return model(input_ids, cache)
-        except TypeError:
+            signature = inspect.signature(model)
+            parameters = list(signature.parameters.values())
+        except (ValueError, TypeError):
+            _model_call_cache[model_id] = "fallback"
+        else:
+            _model_call_cache[model_id] = _call_style_from_parameters(parameters)
+
+    call_type = _model_call_cache[model_id]
+
+    if call_type == "kwarg":
+        return model(input_ids, cache=cache)
+    if call_type == "positional":
+        return model(input_ids, cache)
+    if call_type == "single":
+        return model(input_ids)
+
+    if call_type == "fallback":
+        try:
+            return model(input_ids, cache=cache)
+        except TypeError as first_error:
             try:
-                return model(input_ids)
+                return model(input_ids, cache)
             except TypeError:
-                raise first_error
+                try:
+                    return model(input_ids)
+                except TypeError:
+                    raise first_error
+
+    raise ValueError(f"Unsupported model call style: {call_type}")
+
+
+def _call_style_from_parameters(parameters: list[inspect.Parameter]) -> str:
+    if any(parameter.kind == inspect.Parameter.VAR_KEYWORD for parameter in parameters):
+        return "kwarg"
+
+    cache_parameter = next((parameter for parameter in parameters if parameter.name == "cache"), None)
+    if cache_parameter is not None:
+        if cache_parameter.kind in (inspect.Parameter.KEYWORD_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD):
+            return "kwarg"
+        if cache_parameter.kind == inspect.Parameter.POSITIONAL_ONLY:
+            return "positional"
+
+    positional_parameters = [
+        parameter
+        for parameter in parameters
+        if parameter.kind
+        in (
+            inspect.Parameter.POSITIONAL_ONLY,
+            inspect.Parameter.POSITIONAL_OR_KEYWORD,
+        )
+    ]
+    if len(positional_parameters) >= 2:
+        return "positional"
+    return "single"
 
 
 def _extract_logits_and_cache(output: Any, cache: Any) -> tuple[mx.array, Any]:

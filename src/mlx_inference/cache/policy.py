@@ -49,11 +49,15 @@ class CachePolicy:
 
     def append_tokens(self, request_id: str, token_ids: list[int]) -> None:
         cache = self.get_request_cache(request_id)
-        cache.tokens.extend(int(token_id) for token_id in token_ids)
+        if all(isinstance(token_id, int) for token_id in token_ids):
+            cache.tokens.extend(token_ids)
+        else:
+            cache.tokens.extend([int(token_id) for token_id in token_ids])
+
         if self.config.max_tokens is not None and len(cache.tokens) > self.config.max_tokens:
             if not self.config.rotating:
                 raise ValueError("Cache token limit exceeded and rotating cache is disabled")
-            cache.tokens[:] = cache.tokens[-self.config.max_tokens :]
+            del cache.tokens[: len(cache.tokens) - self.config.max_tokens]
 
     def reset_request(self, request_id: str) -> None:
         self.get_request_cache(request_id).tokens.clear()
@@ -71,10 +75,12 @@ class CachePolicy:
 
     def save_prompt_cache(self, request_id: str, path: str | Path) -> None:
         cache = self.get_request_cache(request_id)
-        Path(path).write_text(json.dumps({"request_id": request_id, "tokens": cache.tokens}, indent=2))
+        output_path = Path(path)
+        with output_path.open("w") as handle:
+            json.dump({"request_id": request_id, "tokens": cache.tokens}, handle)
 
     def load_prompt_cache(self, request_id: str, path: str | Path) -> RequestCache:
         payload = json.loads(Path(path).read_text())
         cache = self.create_request_cache(request_id)
-        cache.tokens.extend(int(token_id) for token_id in payload["tokens"])
+        self.append_tokens(request_id, payload["tokens"])
         return cache
