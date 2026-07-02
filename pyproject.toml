@@ -1,0 +1,35 @@
+[project]
+name = "mlx-inference"
+version = "0.1.0"
+description = "Small MLX-based LLM inference runtime with owned decode, cache policy, scheduling, and evidence capture."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "mlx>=0.29.0",
+  "mlx-lm>=0.31.0",
+  "numpy>=2.0.0",
+]
+
+[project.scripts]
+mlx-inference = "mlx_inference.cli.__main__:main"
+
+[dependency-groups]
+dev = [
+  "pytest>=8.4.0",
+]
+
+[build-system]
+requires = ["hatchling>=1.27.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mlx_inference"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+  "unit: fast operator and helper tests",
+  "component: package component tests",
+  "parity: optional parity tests against an oracle",
+]
+addopts = "-ra"

@@ -1,0 +1,4 @@
+usage: validate_benchmark_json.py [-h] --input INPUT [--expect-fail]
+validate_benchmark_json.py: error: the following arguments are required: --input
+
+exit_code=2

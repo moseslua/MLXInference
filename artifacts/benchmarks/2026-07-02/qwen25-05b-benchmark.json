@@ -1,0 +1,23 @@
+{
+  "machine": {
+    "machine": "arm64",
+    "release": "25.5.0",
+    "system": "Darwin"
+  },
+  "runs": [
+    {
+      "batch_size": 1,
+      "decode_tok_s": 13101.63814234868,
+      "device": "mlx",
+      "dtype": "unknown",
+      "model_id": "fake://deterministic",
+      "output_len": 3,
+      "peak_rss_mb": null,
+      "prefill_tok_s": 17468.85085646491,
+      "prompt_len": 4,
+      "quantization": null,
+      "seed": 0,
+      "ttft_ms": 0.054999998610583134
+    }
+  ]
+}

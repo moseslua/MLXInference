@@ -1,0 +1,10 @@
+usage: mlx-inference [-h] {generate} ...
+
+MLX inference runtime CLI
+
+positional arguments:
+  {generate}
+    generate  Generate text with the owned decode loop
+
+options:
+  -h, --help  show this help message and exit

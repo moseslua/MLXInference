@@ -1,0 +1,1 @@
+no forbidden generation helpers found in src/mlx_inference/runtime or src/mlx_inference/cli

@@ -1,0 +1,9 @@
+Unable to load model or generate output: Unable to load model 'bad-id': 401 Client Error. (Request ID: Root=1-6a460d08-1ebbc88143ae8db3711654b9;87123147-38db-4131-a4df-2e0fe02913d3)
+
+Repository Not Found for url: https://huggingface.co/api/models/bad-id/revision/main.
+Please make sure you specified the correct `repo_id` and `repo_type`.
+If you are trying to access a private or gated repo, make sure you are authenticated and your token has the required permissions.
+For more details, see https://huggingface.co/docs/huggingface_hub/authentication
+Invalid username or password.
+
+exit_code=2

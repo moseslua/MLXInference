@@ -1,0 +1,37 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.13, pytest-9.1.1, pluggy-1.6.0
+rootdir: /Users/moses/MLXInference
+configfile: pyproject.toml
+testpaths: tests
+plugins: anyio-4.14.1
+collected 14 items
+
+<Dir MLXInference>
+  <Dir tests>
+    <Dir component>
+      <Module test_cache_policy.py>
+        <Function test_cache_policy_taxonomy_and_request_isolation>
+        <Function test_paged_cache_claim_is_explicitly_rejected>
+      <Module test_cli_and_scripts.py>
+        <Function test_cli_help_and_fake_generation>
+        <Function test_bad_model_error_is_actionable>
+        <Function test_env_capture_and_benchmark_schema>
+      <Module test_greedy_decode.py>
+        <Function test_generate_greedy_owns_stepwise_model_calls>
+        <Function test_generate_greedy_stops_on_eos>
+      <Module test_owned_decode_static.py>
+        <Function test_runtime_and_cli_do_not_call_mlx_lm_generation_helpers>
+      <Module test_scheduler_generation.py>
+        <Function test_scheduler_drives_real_model_forward_batches>
+      <Module test_step_decode.py>
+        <Function test_decode_step_passes_cache_and_evaluates_logits>
+    <Dir unit>
+      <Module test_ops.py>
+        <Function test_rms_norm_matches_formula>
+        <Function test_rope_preserves_shape_and_rotates_pairs>
+        <Function test_causal_attention_masks_future_tokens>
+        <Function test_gated_mlp_shape_and_values>
+
+========================= 14 tests collected in 0.04s ==========================
+
+exit_code=0

@@ -1,0 +1,1 @@
+artifacts/verification/2026-07-02/parity-basic-chat/parity.json

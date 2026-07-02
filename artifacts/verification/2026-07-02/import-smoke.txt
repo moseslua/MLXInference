@@ -1,0 +1,4 @@
+import smoke ok
+mlx unknown
+mlx_lm 0.31.3
+mlx_inference 0.1.0

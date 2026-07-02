@@ -1,0 +1,3 @@
+missing evidence: ['artifacts/verification/2026-07-02/intentionally-missing.txt']
+
+exit_code=1

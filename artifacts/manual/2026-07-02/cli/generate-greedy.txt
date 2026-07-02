@@ -1,0 +1,1 @@
+{"decode_steps": 3, "model_id": "fake://deterministic", "owned_decode": true, "stop_reason": "max_tokens", "text": "<5> <6> <7>", "token_ids": [5, 6, 7]}

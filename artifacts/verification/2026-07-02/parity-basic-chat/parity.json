@@ -1,0 +1,17 @@
+{
+  "candidate": "mlx_inference",
+  "candidate_text": "<16> <17> <18> <19> <20> <21> <22> <23>",
+  "candidate_token_ids": [
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23
+  ],
+  "model_id": "fake://deterministic",
+  "owned_decode": true,
+  "reference": "fake-oracle"
+}

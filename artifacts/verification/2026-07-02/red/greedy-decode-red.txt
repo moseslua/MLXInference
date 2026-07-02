@@ -1,0 +1,31 @@
+Using CPython 3.12.13
+Creating virtual environment at: .venv
+   Building mlx-inference @ file:///Users/moses/MLXInference
+Downloading sentencepiece (1.2MiB)
+Downloading transformers (10.6MiB)
+Downloading mlx-metal (53.2MiB)
+Downloading numpy (5.1MiB)
+Downloading hf-xet (3.7MiB)
+ Downloaded sentencepiece
+      Built mlx-inference @ file:///Users/moses/MLXInference
+ Downloaded hf-xet
+ Downloaded numpy
+ Downloaded transformers
+ Downloaded mlx-metal
+Installed 38 packages in 114ms
+
+==================================== ERRORS ====================================
+____________ ERROR collecting tests/component/test_greedy_decode.py ____________
+ImportError while importing test module '/Users/moses/MLXInference/tests/component/test_greedy_decode.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/component/test_greedy_decode.py:3: in <module>
+    from mlx_inference.runtime.generate import generate_greedy
+E   ModuleNotFoundError: No module named 'mlx_inference.runtime'
+=========================== short test summary info ============================
+ERROR tests/component/test_greedy_decode.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 0.04s

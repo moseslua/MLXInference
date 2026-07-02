@@ -1,0 +1,13 @@
+{"cache_tokens": [2], "event": "submit", "request_id": "r1"}
+{"cache_tokens": [5], "event": "submit", "request_id": "r2"}
+{"active_requests": ["r1", "r2"], "event": "model_forward_batch", "token_slice": [[2], [5]]}
+{"event": "next_token", "request_id": "r1", "token_id": 3}
+{"cache_tokens": [2, 3], "event": "cache_update", "request_id": "r1", "token_id": 3}
+{"event": "next_token", "request_id": "r2", "token_id": 6}
+{"cache_tokens": [5, 6], "event": "cache_update", "request_id": "r2", "token_id": 6}
+{"active_requests": ["r1", "r2"], "event": "model_forward_batch", "token_slice": [[3], [6]]}
+{"event": "next_token", "request_id": "r1", "token_id": 4}
+{"cache_tokens": [2, 3, 4], "event": "cache_update", "request_id": "r1", "token_id": 4}
+{"event": "next_token", "request_id": "r2", "token_id": 7}
+{"cache_tokens": [5, 6, 7], "event": "cache_update", "request_id": "r2", "token_id": 7}
+{"event": "completed", "results": [{"generated_tokens": [3, 4], "request_id": "r1", "stop_reason": "max_tokens"}, {"generated_tokens": [6, 7], "request_id": "r2", "stop_reason": "max_tokens"}]}

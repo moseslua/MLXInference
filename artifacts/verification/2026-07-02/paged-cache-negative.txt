@@ -1,0 +1,1 @@
+paged cache rejected: Paged KV cache requires token-index to physical-block mapping and is not implemented in phase 1

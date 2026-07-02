@@ -1,0 +1,3 @@
+artifacts/reviews/2026-07-02/manual-qa-evidence/benchmark.json
+
+exit_code=0
