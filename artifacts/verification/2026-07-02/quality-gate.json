@@ -1,0 +1,148 @@
+{
+  "codeReview": {
+    "blockers": [],
+    "by": "lazycodex-code-reviewer",
+    "codeQualityStatus": "CLEAR",
+    "evidence": "Static code review found no blocking findings; owned decode and scheduler/cache invariants checked.",
+    "recommendation": "APPROVE",
+    "reportPath": "artifacts/reviews/2026-07-02/code-review.md"
+  },
+  "criteriaCoverage": {
+    "adversarialClassesCovered": [
+      "malformed_input",
+      "missing_evidence",
+      "forbidden_helper_call",
+      "token_budget_exceeded",
+      "paged_cache_claim"
+    ],
+    "desiredOutcome": "Working src/mlx_inference package with owned decode loop, cache taxonomy, scheduler real batch path, CLI, benchmark/evidence scripts, docs, and final review gate.",
+    "originalIntent": "Build an MLX inference runtime end to end from the finalized plan, using MLX-LM as substrate/oracle rather than generation owner.",
+    "passCount": 33,
+    "totalCriteria": 33,
+    "userOutcomeReview": "All ULW goals have pass evidence; G001-G010 complete and G011 checkpoint-ready."
+  },
+  "gateReview": {
+    "blockers": [],
+    "by": "lazycodex-gate-reviewer",
+    "evidence": "Gate review confirmed all 33 criteria pass, final positive/negative gate artifacts are non-empty, and G011 can be checkpointed.",
+    "recommendation": "APPROVE",
+    "reportPath": "artifacts/reviews/2026-07-02/gate-review.md"
+  },
+  "iteration": {
+    "evidence": "Final rerun passed: 14 tests, owned decode, scheduler replay, final gate, and compileall.",
+    "fullRerun": true,
+    "rerunCommands": [
+      "uv run python -m pytest tests/unit tests/component -q --junitxml artifacts/verification/2026-07-02/final-unit-component-junit.xml",
+      "uv run python scripts/verify/assert_owned_decode.py --package src/mlx_inference --forbid mlx_lm.generate --forbid mlx_lm.stream_generate",
+      "uv run python scripts/verify/replay_scheduler_trace.py --trace artifacts/verification/2026-07-02/scheduler-trace.jsonl",
+      "uv run python scripts/verify/final_gate.py --date 2026-07-02 --out artifacts/verification/2026-07-02/final-report.md",
+      "uv run python -m compileall -q src scripts tests"
+    ],
+    "status": "passed"
+  },
+  "manualQa": {
+    "adversarialCases": [
+      {
+        "artifactRefs": [
+          "artifact-final-gate-negative"
+        ],
+        "criterionRef": "G011-C002",
+        "expectedBehavior": "validator rejects missing required evidence and exits nonzero",
+        "id": "adv-final-gate-missing-evidence",
+        "scenario": "final gate run with --require-missing-demo",
+        "verdict": "passed"
+      },
+      {
+        "artifactRefs": [
+          "artifact-bad-benchmark"
+        ],
+        "criterionRef": "G011-C002",
+        "expectedBehavior": "validator reports missing benchmark keys and exits 0 because failure was expected",
+        "id": "adv-bad-benchmark-schema",
+        "scenario": "validate malformed benchmark fixture with --expect-fail",
+        "verdict": "passed"
+      }
+    ],
+    "artifactRefs": [
+      {
+        "description": "deterministic fake generation",
+        "id": "artifact-cli-generate",
+        "kind": "cli-transcript",
+        "path": "artifacts/manual/2026-07-02/cli/generate-greedy.txt"
+      },
+      {
+        "description": "scheduler batch/cache trace",
+        "id": "artifact-scheduler-trace",
+        "kind": "log",
+        "path": "artifacts/verification/2026-07-02/scheduler-trace.jsonl"
+      },
+      {
+        "description": "scheduler trace replay",
+        "id": "artifact-scheduler-replay",
+        "kind": "cli-transcript",
+        "path": "artifacts/verification/2026-07-02/final-scheduler-replay.txt"
+      },
+      {
+        "description": "positive final gate report",
+        "id": "artifact-final-report",
+        "kind": "log",
+        "path": "artifacts/verification/2026-07-02/final-report.md"
+      },
+      {
+        "description": "positive final gate stdout",
+        "id": "artifact-final-gate-output",
+        "kind": "cli-transcript",
+        "path": "artifacts/verification/2026-07-02/final-gate-output.txt"
+      },
+      {
+        "description": "negative final gate failure",
+        "id": "artifact-final-gate-negative",
+        "kind": "cli-transcript",
+        "path": "artifacts/verification/2026-07-02/final-gate-negative.txt"
+      },
+      {
+        "description": "malformed benchmark schema rejection",
+        "id": "artifact-bad-benchmark",
+        "kind": "cli-transcript",
+        "path": "artifacts/benchmarks/2026-07-02/bad-benchmark-negative.txt"
+      }
+    ],
+    "by": "lazycodex-qa-executor",
+    "evidence": "Manual QA approved CLI/data surfaces and captured fresh evidence under artifacts/reviews/2026-07-02/manual-qa-evidence/.",
+    "status": "passed",
+    "surfaceEvidence": [
+      {
+        "artifactRefs": [
+          "artifact-cli-generate"
+        ],
+        "criterionRef": "G011-C001",
+        "id": "surface-cli-generate",
+        "invocation": "uv run python -m mlx_inference.cli.generate --model fake://deterministic --prompt abc --max-new-tokens 3 --temperature 0 --seed 7 --json",
+        "surface": "cli",
+        "verdict": "passed"
+      },
+      {
+        "artifactRefs": [
+          "artifact-scheduler-trace",
+          "artifact-scheduler-replay"
+        ],
+        "criterionRef": "G011-C001",
+        "id": "surface-scheduler-trace",
+        "invocation": "uv run python scripts/verify/capture_scheduler_trace.py --model-id fake://deterministic --out artifacts/verification/2026-07-02/scheduler-trace.jsonl",
+        "surface": "cli",
+        "verdict": "passed"
+      },
+      {
+        "artifactRefs": [
+          "artifact-final-report",
+          "artifact-final-gate-output"
+        ],
+        "criterionRef": "G011-C001",
+        "id": "surface-final-gate-positive",
+        "invocation": "uv run python scripts/verify/final_gate.py --date 2026-07-02 --out artifacts/verification/2026-07-02/final-report.md",
+        "surface": "cli",
+        "verdict": "passed"
+      }
+    ]
+  }
+}

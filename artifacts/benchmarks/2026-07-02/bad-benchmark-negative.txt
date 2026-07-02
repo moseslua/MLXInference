@@ -1,4 +1,3 @@
-usage: validate_benchmark_json.py [-h] --input INPUT [--expect-fail]
-validate_benchmark_json.py: error: the following arguments are required: --input
+expected failure: Benchmark run 0 missing keys: ['batch_size', 'decode_tok_s', 'device', 'dtype', 'output_len', 'peak_rss_mb', 'prefill_tok_s', 'prompt_len', 'quantization', 'seed', 'ttft_ms']
 
-exit_code=2
+exit_code=0
